@@ -1,22 +1,31 @@
-# TODO: Update for OpenCLIP
-
 from dataclasses import dataclass
 import torch
 
+PROMPTS = {
+    "p1": "an aerial image of a {}",
+    "p2": "an aerial image of a {}, a type of intersection"
+}
+
 @dataclass
 class Config:
-    # --- Path + Directory Management ---
-    db_path: str = "annotations.duckdb"
-    img_root_dir: str = "FILL IN ONCE DETERMINE WHERE IMAGES ARE"
-    val_size: float = 0.2
+    # --- Data ---
+    tsv_path: str = "data_prep/out"
     seed: int = 123
     
-    # --- Model + Training Hyperparams --- 
-    model_name: str = "openai/clip-vit-base-patch32"
+    # --- Model --- 
+    model_name: str = "ViT-B-32"
+    pretrained: str = "openai"
+
+    # --- Eval --
+    ks: tuple = (5, 10)
     batch_size: int = 32
-    epochs: int = 10
-    learning_rate: float = 1e-4
     num_workers: int = 4
+    runs_dir: str = "runs"
+
+    # --- Fine-tuning --
+    val_size: float = 0.2
+    epochs: int = 10
+    learning_rate: float = 1e-5
 
     # --- Device ---
     @property
