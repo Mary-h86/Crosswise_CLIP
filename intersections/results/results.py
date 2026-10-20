@@ -23,7 +23,8 @@ def make_run_name(
     ex2) make_run_name("ft-full", "ViT-B-32", "openai", "p1", "lr1e-5-ep10-s0") -> 'ft-full_ViT-B-32_openai_p1_lr1e-5-ep10-s0'
     """
     fields = [train, model, pretrained, prompt_key] + ([extras] if extras else [])
-
+    parts = [slug(f) for f in fields]
+    return "_".join(parts)
 
 def git_commit():
     """Short hash of the code that produced the run, plus '+dirty' if there are uncommitted changes; None if no repo exists"""
