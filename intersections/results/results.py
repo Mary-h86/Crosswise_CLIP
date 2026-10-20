@@ -67,7 +67,7 @@ def save_run(
 
     record = {
         "run_name": run_name,
-        "date": datetime.now().isoformat(timespec="seonds"),
+        "date": datetime.now().isoformat(timespec="seconds"),
         "git_commit": git_commit(),
         "settings": settings,
         "metrics": metrics,
