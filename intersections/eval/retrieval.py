@@ -1,4 +1,4 @@
-from data_prep.dataset import SmallTileDataset, TileDataset
+from data_prep.dataset import TileDataset
 import open_clip
 from configs.config import Config
 import numpy as np
@@ -41,7 +41,7 @@ def embed_tiles(
     num_workers=0,
 ):
     """Push tsv tiles through image encoder"""
-    dataset = SmallTileDataset(tsv_path, preprocess)
+    dataset = TileDataset(tsv_path, preprocess)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     feats, labels, tile_ids = [], [], []
