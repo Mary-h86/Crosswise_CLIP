@@ -9,11 +9,11 @@ PROMPTS = {
 @dataclass
 class Config:
     # --- Data ---
-    tsv_path: str = "data_prep/out"
+    tsv_path: str = "data_prep/data/tiles.tsv"
     seed: int = 123
     
     # --- Model --- 
-    model_name: str = "ViT-B-32"
+    model_name: str = "ViT-B-32-quickgelu"
     pretrained: str = "openai"
 
     # --- Eval --
