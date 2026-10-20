@@ -15,14 +15,15 @@ def make_run_name(
     model: str,
     pretrained: str,
     prompt_key: str,
+    data: str,
     extras: str = ""
 ) -> str: 
-    """Naming conventions: {train}_{model}_{pretrained}_{prompt}[_{Extras}]
+    """Naming conventions: {train}_{model}_{pretrained}_{prompt}_{dataset}[_{Extras}]
     
     ex1) make_run_name("zs", "ViT-B-32", "openai", "p1") -> 'zs_ViT-B-32_openai_p1'
     ex2) make_run_name("ft-full", "ViT-B-32", "openai", "p1", "lr1e-5-ep10-s0") -> 'ft-full_ViT-B-32_openai_p1_lr1e-5-ep10-s0'
     """
-    fields = [train, model, pretrained, prompt_key] + ([extras] if extras else [])
+    fields = [train, model, pretrained, prompt_key, data] + ([extras] if extras else [])
     parts = [slug(f) for f in fields]
     return "_".join(parts)
 
