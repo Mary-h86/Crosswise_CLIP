@@ -2,7 +2,8 @@
 .venv/
 *.duckdb
 *.pt
-results/
+runs/
+intersections/data_prep/data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
