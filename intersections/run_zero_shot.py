@@ -19,7 +19,8 @@ def run_zs():
     args = ap.parse_args()
 
     prompts = {key: PROMPTS[key] for key in args.prompt}
-    names = {key:make_run_name("zs", cfg.model_name, cfg.pretrained, key) for key in prompts}
+    data_name = Path(args.tsv).stem
+    names = {key:make_run_name("zs", cfg.model_name, cfg.pretrained, key, data_name) for key in prompts}
 
     device = cfg.device
     model, preprocess, tokenizer = load_model(cfg.model_name, cfg.pretrained, device)
@@ -48,6 +49,8 @@ def run_zs():
             "open_clip_version": getattr(open_clip, "__version__", None),
         }
         save_run(names[key], settings, metrics, cfg.runs_dir, overwrite=args.overwrite)
+        print("\n" + "=" * 60)
+        print(f"{names[key]}   prompt: {template!r}")
         print_summary(metrics)
         rows.append((names[key], metrics["mAP"], metrics["image_to_text_recall@1"]))
 
