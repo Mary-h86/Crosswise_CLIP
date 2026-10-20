@@ -1,7 +1,7 @@
 import pandas as pd
 
-TSV = "data/out"
-OUT = "data/tiles_small.tsv"
+TSV = "./data/tiles.tsv"
+OUT = "./data/tiles_small.tsv"
 PER_TYPE = 3 
 SEP = ","
 

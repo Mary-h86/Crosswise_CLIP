@@ -37,6 +37,6 @@ class TileDataset(Dataset):
         }
 
 if __name__ == "__main__":
-    test_ds = TileDataset("./out", transforms.Lambda(lambda x: x))
+    test_ds = TileDataset("./data/tiles.tsv", transforms.Lambda(lambda x: x))
     print(test_ds.type_names)
     print(len(test_ds))

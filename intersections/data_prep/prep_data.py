@@ -40,5 +40,5 @@ def read_duckdb(
     df.to_csv(out, sep="\t", index=False)
 
 if __name__ == "__main__":
-    read_duckdb("./data/annotations_per_tile.duckdb", "./data/out")
+    read_duckdb("./data/annotations_per_tile.duckdb", "./data/tiles.tsv")
 
