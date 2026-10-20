@@ -26,9 +26,7 @@ def main():
     # --- tiles ---
     # print(con.table("tiles").columns)
     con.sql("""
-        SELECT intersection_type
-        FROM tiles
-        WHERE intersection_type != '[]'
+        DESCRIBE tiles
     """).show()
     
     # result = con.execute("DESCRIBE  tiles").fetchall()

@@ -10,7 +10,7 @@ class TileDataset(Dataset):
         tsv_path: str, 
         transform: transforms
     ):
-        self.df = pd.read_csv(tsv_path, sep="\t")
+        self.df = pd.read_csv(tsv_path, sep="\t", dtype={"tile_id": str})
         self.type_names = sorted({t for s in self.df["types"] for t in s.split(",")})
         self.indexes = {t: i for i, t in enumerate(self.type_names)}
         self.transform = transform
