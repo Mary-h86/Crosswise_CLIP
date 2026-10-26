@@ -5,6 +5,7 @@
 runs/
 src/crosswise_clip/data_prep/data/
 ./uv.lock
+./vscode
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
