@@ -3,9 +3,8 @@
 *.duckdb
 *.pt
 runs/
-intersections/data_prep/data
-uv.lock
-pyproject.toml
+src/crosswise_clip/data_prep/data/
+./uv.lock
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
