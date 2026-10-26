@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 import numpy as np
 import pandas as pd
-from src.crosswise_clip.config import Config
+from crosswise_clip.config import Config
 
 N_BOOTSTRAP = 2000
 

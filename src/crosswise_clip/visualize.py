@@ -11,7 +11,7 @@ import duckdb
 import pandas as pd
 from PIL import Image
  
-from src.crosswise_clip.config import Config
+from crosswise_clip.config import Config
  
 # Everyday words that are never highlighted: articles, prepositions, conjunctions, pronouns and
 # determiners, auxiliary verbs. Every other word that two descriptions share is highlighted.

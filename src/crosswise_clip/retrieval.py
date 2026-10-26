@@ -3,8 +3,8 @@ from pathlib import Path
 import faiss
 import numpy as np
 import pandas as pd
-from src.crosswise_clip.config import Config
-from src.crosswise_clip.embed import (
+from crosswise_clip.config import Config
+from crosswise_clip.embed import (
     default_out_path,
     load_embeddings
 )
