@@ -9,7 +9,7 @@ PROMPTS = {
 @dataclass
 class Config:
     # --- Data ---
-    tsv_path: str = "data_prep/data/tiles.tsv"
+    tsv_path: str = "src/crosswise_clip/data_prep/data/tiles.tsv"
     seed: int = 123
     
     # --- Model --- 
