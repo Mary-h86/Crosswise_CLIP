@@ -4,7 +4,7 @@ import faiss
 import numpy as np
 import pandas as pd
 from crosswise_clip.config import Config
-from crosswise_clip.embed import (
+from crosswise_clip.embed_image import (
     default_out_path,
     load_embeddings
 )
