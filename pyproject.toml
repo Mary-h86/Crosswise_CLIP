@@ -10,6 +10,7 @@ dependencies = [
     "pandas>=2.3.3",
     "pillow>=12.3.0",
     "scikit-learn>=1.7.2",
+    "sentence-transformers>=6.2.0",
     "tqdm>=4.70.1",
 ]
 
