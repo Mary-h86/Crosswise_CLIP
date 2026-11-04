@@ -106,6 +106,7 @@ def save_text_embeddings(
         bge=emb.bge.astype(np.float32),
         clip_tokens=emb.clip_tokens.astype(np.int32),
         tile_ids=np.array(emb.tile_ids, dtype=str),
+        descriptions=np.array(emb.descriptions, dtype=str),
         clip_model=np.array(emb.clip_model),
         clip_pretrained=np.array(emb.clip_pretrained),
         bge_model=np.array(emb.bge_model),
