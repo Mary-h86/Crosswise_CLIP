@@ -14,7 +14,7 @@ def phash(path, size=8) -> np.ndarray:
 
     # Convert to grayscale + resize to 32x32 
     img = Image.open(path).convert("L")
-    img = img.resize((32, 32), Image.Resampling.LANCZOS)
+    img = img.resize((size * 4, size * 4), Image.Resampling.LANCZOS)
 
     pixels = np.asarray(img, dtype=float)
     
