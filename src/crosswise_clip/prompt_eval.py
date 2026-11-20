@@ -1,6 +1,5 @@
 import argparse
 import shutil
-from math import comb
 from pathlib import Path
 
 import duckdb
@@ -91,83 +90,11 @@ def rank_tiles(scores: np.ndarray) -> np.ndarray:
     return np.argsort(-np.round(scores, 6), kind="stable")
 
 
-def chance_tail(n: int, positives: int, k: int, hits: int) -> float:
-    """Probability that k tiles drawn at random from n tiles, `positives` of which have the feature, include at least `hits` that do."""
-    ways = sum(comb(positives, x) * comb(n - positives, k - x) for x in range(hits, min(positives, k) + 1))
-    return ways / comb(n, k)
-
-
-def auc(scores: np.ndarray, positive: np.ndarray) -> float:
-    """Probability that a random positive tile outscores a random negative one (ties count half). 0.5 = chance."""
-    rank = pd.Series(scores).rank(method="average").to_numpy()  # 1 = lowest score
-    n_pos = int(positive.sum())
-    n_neg = len(positive) - n_pos
-    return float((rank[positive].sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg))
-
-
-def score_prompt(scores: np.ndarray, positive: np.ndarray | None, order: np.ndarray, k: int) -> dict:
-    """Hits, chance, lift, p and AUC for one prompt. A look-only prompt (positive is None) gets blanks."""
-    n = len(scores)
-    if positive is None:
-        return {"hits": pd.NA, "hit_rate": np.nan, "tiles_with_feature": pd.NA, "n_tiles": n,
-                "chance": np.nan, "lift": np.nan, "p_chance": np.nan, "auc": np.nan}
-    hits, positives = int(positive[order].sum()), int(positive.sum())
-    chance = positives / n
-    return {"hits": hits, "hit_rate": hits / k, "tiles_with_feature": positives, "n_tiles": n, "chance": chance,
-            "lift": hits / k / chance, "p_chance": chance_tail(n, positives, k, hits), "auc": auc(scores, positive)}
-
-
 def md_table(headers: list[str], rows: list[list[str]], text_columns: int = 1) -> str:
     """Markdown table. The first `text_columns` columns are left-aligned, the rest right-aligned (numbers)."""
     lines = ["| " + " | ".join(headers) + " |", "|" + "---|" * text_columns + "---:|" * (len(headers) - text_columns)]
     lines += ["| " + " | ".join(r) + " |" for r in rows]
     return "\n".join(lines)
-
-
-def p_text(p: float) -> str:
-    return "<0.001" if p < 0.001 else f"{p:.3f}"
-
-
-def summary_table(summary: pd.DataFrame, k: int) -> str:
-    """The three numbers worth reading: hits in the top k, the hits k random tiles would give, and the AUC. The CSV has the rest."""
-    rows = []
-    for r in summary.itertuples():
-        numbers = ["n/a"] * 3 if pd.isna(r.auc) else [f"{int(r.hits)}/{k}", f"{k * r.chance:.1f}/{k}", f"{r.auc:.2f}"]
-        rows.append([r.prompt_id, r.feature, r.wording] + numbers)
-    return md_table(["Prompt", "Feature", "Wording", f"Hits in top-{k}", "By chance", "AUC"], rows, text_columns=3)
-
-
-def pivot_table(summary: pd.DataFrame, k: int) -> str:
-    """One row per feature, one column per wording; each cell is hits in the top k and the AUC."""
-    wordings = list(dict.fromkeys(summary["wording"]))
-    rows = []
-    for feature, group in summary.groupby("feature", sort=False):
-        chance = group["chance"].iloc[0]
-        row = [f"{feature} (no labels)" if pd.isna(chance) else f"{feature} (chance {k * chance:.1f}/{k})"]
-        for wording in wordings:
-            cell = group[group["wording"] == wording]
-            if not len(cell):
-                row.append("-")
-            elif pd.isna(cell["auc"].iloc[0]):
-                row.append("n/a")
-            else:
-                row.append(f"{int(cell['hits'].iloc[0])}/{k} · AUC {cell['auc'].iloc[0]:.2f}")
-        rows.append(row)
-    return md_table(["Feature"] + wordings, rows)
-
-
-def show_top(title: str, row, top: pd.DataFrame, count: int) -> None:
-    """Print the best-ranked tiles of one prompt so they can be opened and looked at."""
-    print(f"\n{title}: {row.prompt_id} ({row.text!r}), AUC {row.auc:.2f}")
-    for r in top.head(count).itertuples():
-        print(f"  rank {r.rank:2d}  {r.tile_id}  sim {r.similarity:.3f}  {'has ' + row.feature if r.feature_confirmed else 'not confirmed'}")
-
-
-def show_look_only(row, top: pd.DataFrame, count: int) -> None:
-    """Print the best-ranked tiles of a prompt that has no labels, so they can be opened and looked at."""
-    print(f"\nLook only, no labels to score against: {row.prompt_id} ({row.text!r})")
-    for r in top.head(count).itertuples():
-        print(f"  rank {r.rank:2d}  {r.tile_id}  sim {r.similarity:.3f}")
 
 
 def main() -> None:
@@ -192,16 +119,16 @@ def main() -> None:
         if not path.exists():
             raise SystemExit(f"No {what} at {path}.")
     out_dir = Path(args.out_dir) if args.out_dir else Path(cfg.runs_dir) / "prompt_eval" / prompts_path.stem
-    existing = [f for f in ("prompt_summary.csv", "prompt_top_tiles.csv") if (out_dir / f).exists()]
-    if existing and not args.overwrite:  # checked now, before the slow part
-        raise SystemExit(f"{out_dir} already has results ({', '.join(existing)}). Pass --overwrite to replace them, "
-                         "--out-dir to write somewhere else, or save the prompts under another file name.")
+    if (out_dir / "prompt_top_tiles.csv").exists() and not args.overwrite:  # checked now, before the slow part
+        raise SystemExit(f"{out_dir} already has results (prompt_top_tiles.csv). Pass --overwrite to replace them, "
+            "--out-dir to write somewhere else, or save the prompts under another file name.")
 
     tiles = pd.read_csv(tsv, sep="\t", dtype={"tile_id": str})
     image = load_embeddings(image_path)
     if image.tile_ids != tiles["tile_id"].tolist():
         raise SystemExit("The TSV and the image cache list different tiles or a different order. Re-run embed.py with --overwrite.")
-    n, k = len(tiles), args.k
+    n = len(tiles)
+    k = n if args.k is None else args.k
     if not 1 <= k <= n:
         raise SystemExit(f"--k must be between 1 and the number of tiles ({n}).")
 
@@ -212,9 +139,7 @@ def main() -> None:
         if FEATURES[feature]["kind"] == "none":
             truth[feature] = None  # look only: nothing to score against
             continue
-        truth[feature] = has_feature(annotations, FEATURES[feature])
-        if not 0 < truth[feature].sum() < n:
-            raise SystemExit(f"'{feature}' is confirmed on {truth[feature].sum()} of {n} tiles, so it cannot be scored.")
+        truth[feature] = has_feature(annotations, FEATURES[feature])  # shown as feature_confirmed; prompt_metrics.py does the scoring
 
     model, _, tokenizer = load_model(cfg.model_name, cfg.pretrained, args.device)
     vectors, tokens = encode_prompts(model, tokenizer, prompts["text"].tolist(), args.device)
@@ -222,46 +147,30 @@ def main() -> None:
         print(f"Warning: {int((tokens > CLIP_CONTEXT).sum())} prompt(s) are longer than {CLIP_CONTEXT} tokens, so CLIP cuts them.")
     sims = image.image_embeds.astype(np.float64) @ vectors.astype(np.float64).T  # (n tiles, n prompts)
 
-    summary, tops = [], {}
+    tops = {}
     for j, p in enumerate(prompts.itertuples()):
         positive, scores = truth[p.feature], sims[:, j]
         order = rank_tiles(scores)[:k]
-        summary.append({"prompt_id": p.prompt_id, "feature": p.feature, "wording": p.wording, "text": p.text, "tokens": int(tokens[j]),
-                        "k": k, **score_prompt(scores, positive, order, k)})
         tops[p.prompt_id] = pd.DataFrame({
             "prompt_id": p.prompt_id, "feature": p.feature, "wording": p.wording, "text": p.text, "rank": np.arange(1, k + 1),
             "tile_id": tiles["tile_id"].to_numpy()[order], "similarity": np.round(scores[order], 4),
             "feature_confirmed": [None] * k if positive is None else positive[order],  # blank for a look-only prompt
             "tile_types": tiles["types"].to_numpy()[order]})
-    summary = pd.DataFrame(summary)
-    summary[["hits", "tiles_with_feature"]] = summary[["hits", "tiles_with_feature"]].astype("Int64")  # whole numbers, blank for look-only
-
     labeled = {f: m for f, m in truth.items() if m is not None}
-    print(f"{tsv.name}: {n} tiles, {len(prompts)} prompts, top-{k}, {cfg.model_name} ({cfg.pretrained})")
+    print(f"{tsv.name}: {n} tiles, {len(prompts)} prompts, top {k} saved per prompt, {cfg.model_name} ({cfg.pretrained})")
     if labeled:
-        print("Tiles with the feature confirmed (every other tile counts as a miss): "
+        print("Tiles with the feature confirmed (shown as feature_confirmed; prompt_metrics.py decides what counts as a hit): "
               + ", ".join(f"{f} {int(m.sum())} ({100 * m.mean():.1f}%)" for f, m in labeled.items()))
     if len(labeled) < len(truth):
-        print("No labels, so retrieved and shown but not scored: " + ", ".join(f for f, m in truth.items() if m is None))
-    print(f"\n## Every prompt\n\n{summary_table(summary, k)}")
-    print(f"\n## Hits in the top-{k} and AUC, by feature and wording\n\n{pivot_table(summary, k)}")
-    scored = summary[summary["auc"].notna()]
-    if len(scored):
-        print("\nAUC 0.5 = chance, 1.0 = every tile with the feature outranks every tile without. A tile with an unknown label counts as a miss,")
-        print("so the scores are probably underestimates. With few tiles in the top-k, a 1-2 hit difference between wordings is within chance.")
-        best, worst = scored.loc[scored["auc"].idxmax()], scored.loc[scored["auc"].idxmin()]
-        show_top("Best prompt by AUC", best, tops[best.prompt_id], args.show)
-        show_top("Worst prompt by AUC", worst, tops[worst.prompt_id], args.show)
-    for row in summary[summary["auc"].isna()].itertuples():
-        show_look_only(row, tops[row.prompt_id], args.show)
+        print("No labels, so retrieved but not scored: " + ", ".join(f for f, m in truth.items() if m is None))
+    if k < n:
+        print(f"Warning: only the top {k} of {n} tiles are saved per prompt, so prompt_metrics.py cannot score this run. Leave out --k to save them all.")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    summary.to_csv(out_dir / "prompt_summary.csv", index=False)
     pd.concat(tops.values(), ignore_index=True).to_csv(out_dir / "prompt_top_tiles.csv", index=False)
     shutil.copyfile(prompts_path, out_dir / "prompts_used.csv")  # so the folder says which prompts made it
-    print(f"\nWrote {out_dir / 'prompt_summary.csv'} (one row per prompt) and {out_dir / 'prompt_top_tiles.csv'} (one row per prompt and retrieved tile)")
-    print(f"To look at the tiles: uv run python -m crosswise_clip.visualize_prompts --tsv {tsv} --csv-dir {out_dir}")
-
+    print(f"\nWrote {out_dir / 'prompt_top_tiles.csv'} (one row per prompt and ranked tile)")
+    print(f"Next: uv run python prompt_metrics.py --csv-dir {out_dir}")
 
 if __name__ == "__main__":
     main()
