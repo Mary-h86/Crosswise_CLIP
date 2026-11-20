@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
  
 from crosswise_clip.config import Config
-from crosswise_clip.prompt_eval import FEATURES, chance_tail, has_feature, load_annotations, md_table
+from crosswise_clip.prompt_eval import FEATURES, has_feature, load_annotations, md_table
  
 NEEDED = ["prompt_id", "feature", "text", "rank", "tile_id"]
  
@@ -60,7 +60,7 @@ def hits_by_feature(top: pd.DataFrame, tile_index: dict, truth: dict, k: int, n:
             hits, positives = int(mask[idx].sum()), int(mask.sum())
             rows.append({"prompt_id": pid, "run": g["run"].iloc[0], "prompted_feature": g["feature"].iloc[0], "text": g["text"].iloc[0],
                          "column_feature": feature, "k": k, "hits": hits, "share": hits / k, "tiles_with_feature": positives,
-                         "base_rate": positives / n, "lift": hits / k / (positives / n), "p_chance": chance_tail(n, positives, k, hits)})
+                         "base_rate": positives / n, "lift": hits / k / (positives / n)})
     return pd.DataFrame(rows)
  
  
@@ -124,7 +124,7 @@ def main() -> None:
     ap.add_argument("--tsv", default=cfg.tsv_path, help="TSV written by prep_data / exclude_types (the tiles the retrieval ran on)")
     ap.add_argument("--db", default=None, help="DuckDB file (default: annotations_per_tile.duckdb next to the TSV)")
     ap.add_argument("--csv-dir", nargs="+", default=None, help="run folder(s) written by prompt_eval.py (default: every run under runs/prompt_eval)")
-    ap.add_argument("--k", type=int, default=None, help="use only the top k tiles of each prompt (default: all the CSVs have)")
+    ap.add_argument("--k", type=int, default=5, help="use only the top k tiles of each prompt (default: 5)")
     ap.add_argument("--out-dir", default=None, help="folder for the results (default: runs/prompt_confusion/<run folder name>)")
     ap.add_argument("--overwrite", action="store_true", help="replace the results already in the folder")
     args = ap.parse_args()
