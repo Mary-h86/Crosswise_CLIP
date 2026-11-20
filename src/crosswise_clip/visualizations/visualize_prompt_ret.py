@@ -79,7 +79,9 @@ def card(rows: pd.DataFrame, stats, paths: dict, size: int, cache: dict) -> str:
     else:
         line += f" &nbsp;·&nbsp; {sum(s is True for s in states)} of {len(rows)} shown have {html.escape(first.feature)} confirmed"
         if stats is not None and not pd.isna(stats.auc):
-            line += f" (chance {100 * stats.chance:.0f}%, AUC {stats.auc:.2f})"
+            line += (f"<br>Over all {int(stats.n_tiles)} annotated tiles ({int(stats.n_positives)} have it, {100 * stats.base_rate:.0f}%), "
+                     f"top {int(stats.k)}: precision {stats.precision:.2f}, recall {stats.recall:.2f}, F1 {stats.f1:.2f}. "
+                     f"Best F1 over every k: {stats.best_f1:.2f} at k={int(stats.best_k)}.")
     figs = [figure(thumbnail_uri(paths.get(r.tile_id, ""), size, cache), s, first.feature, r) for r, s in zip(rows.itertuples(), states)]
     return f'<section class="card"><h2>{head}</h2><p>{line}</p><div class="row">{"".join(figs)}</div></section>'
 
@@ -104,7 +106,7 @@ def main() -> None:
             raise SystemExit(f"No prompt_eval results under {runs}. Run prompt_eval.py first, or pass --csv-dir.")
         csv_dir = found[-1].parent
         print(f"Using the most recent run: {csv_dir}")
-    top_path, summary_path = csv_dir / "prompt_top_tiles.csv", csv_dir / "prompt_summary.csv"
+    top_path, summary_path = csv_dir / "prompt_top_tiles.csv", csv_dir / "prompt_metrics.csv"
     if not top_path.exists():
         raise SystemExit(f"No {top_path}. Run prompt_eval.py first, or pass --csv-dir.")
     top = pd.read_csv(top_path, dtype={"tile_id": str}, keep_default_na=False)
@@ -112,6 +114,13 @@ def main() -> None:
     confirmed = top["feature_confirmed"].astype(str).str.strip().str.lower().map({"true": True, "false": False})
     top["feature_confirmed"] = confirmed.astype(object).where(confirmed.notna(), None)
     stats = pd.read_csv(summary_path).set_index("prompt_id") if summary_path.exists() else None
+    left_out, annotated_path = 0, csv_dir / "annotated_tiles.csv"
+    if annotated_path.exists():  # prompt_metrics.py leaves tiles with no annotations out of the ranking, so show the same top tiles it scored
+        annotated = pd.read_csv(annotated_path, dtype={"tile_id": str})
+        keep = annotated["annotated"].astype(str).str.lower() == "true"
+        left_out = int((~keep).sum())
+        top = top[top["tile_id"].isin(set(annotated.loc[keep, "tile_id"]))].copy()
+        top["rank"] = top.groupby("prompt_id", sort=False)["rank"].rank(method="first").astype(int)  # 1, 2, 3 ... again
 
     available = list(dict.fromkeys(top["prompt_id"]))
     chosen = args.prompt_ids if args.prompt_ids else available
@@ -138,8 +147,9 @@ def main() -> None:
         "<h1>Text-to-image retrieval</h1>"
         f'<p class="meta">{html.escape(cfg.model_name)} ({html.escape(cfg.pretrained)}) zero-shot. Each card is one prompt and the tiles '
         "whose image vectors are most similar to its text vector, best first. Green border: the database confirms the feature on that tile. "
-        "Amber: it does not, which can mean the feature is absent or just not recorded, so judge by eye too. "
-        "Grey: the feature has no labels at all, so there is nothing to confirm.</p>"
+        "Amber: it does not. The scores count a feature the tile lacks as absent, but it may just not be recorded, so judge by eye too. "
+        "Grey: the feature has no labels at all, so there is nothing to confirm."
+        + (f" {left_out} tiles with no annotations at all are left out of the rankings, as in the scores." if left_out else "") + "</p>"
         + "".join(cards)
         + "</main></body></html>"
     )
