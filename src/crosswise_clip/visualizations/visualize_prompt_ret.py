@@ -69,7 +69,7 @@ def figure(src: str | None, confirmed: bool | None, feature: str, row) -> str:
 
 
 def card(rows: pd.DataFrame, stats, paths: dict, size: int, cache: dict) -> str:
-    """One prompt: its title, one line of numbers (when prompt_summary.csv is available), then its tiles in rank order."""
+    """One prompt: its title, one line of numbers, then its tiles in rank order."""
     first = rows.iloc[0]
     head = f"{html.escape(first.prompt_id)} <span>· {html.escape(first.feature)} · {html.escape(first.wording)}</span>"
     line = f"“{html.escape(first.text)}”"
@@ -78,7 +78,7 @@ def card(rows: pd.DataFrame, stats, paths: dict, size: int, cache: dict) -> str:
         line += f" &nbsp;·&nbsp; no labels exist for {html.escape(first.feature)}, so judge by eye"
     else:
         line += f" &nbsp;·&nbsp; {sum(s is True for s in states)} of {len(rows)} shown have {html.escape(first.feature)} confirmed"
-        if stats is not None and not pd.isna(stats.auc):
+        if stats is not None and not pd.isna(stats.n_positives):
             line += (f"<br>Over all {int(stats.n_tiles)} annotated tiles ({int(stats.n_positives)} have it, {100 * stats.base_rate:.0f}%), "
                      f"top {int(stats.k)}: precision {stats.precision:.2f}, recall {stats.recall:.2f}, F1 {stats.f1:.2f}. "
                      f"Best F1 over every k: {stats.best_f1:.2f} at k={int(stats.best_k)}.")
